@@ -1,0 +1,39 @@
+# Core daemon
+pystray>=0.19.5
+pillow>=10.0.0
+keyboard>=0.13.5
+
+# File watching and parsing
+watchdog>=3.0.0
+pdfplumber>=0.10.0
+python-docx>=1.1.0
+
+# Screen capture and OCR
+mss>=9.0.1
+winrt-Windows.Media.Ocr>=2.0.0  # via winrt
+winrt-Windows.Graphics.Imaging>=2.0.0
+winrt-Windows.Storage.Streams>=2.0.0
+ImageHash>=4.3.1
+
+# Windows API
+pywin32>=306
+
+# Vector store
+# Note: sqlite-vec installation may need manual setup on Windows
+# See docs/setup.md
+
+# Embeddings
+onnxruntime>=1.17.0
+tokenizers>=0.15.0
+numpy>=1.24.0
+
+# LLM runtime
+# Note: for Vulkan/DirectML backend, see docs/setup.md
+llama-cpp-python>=0.2.50
+
+# UI
+customtkinter>=5.2.0
+
+# Dev tooling
+pytest>=7.4.0
+ruff>=0.1.0
