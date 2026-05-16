@@ -37,7 +37,10 @@ class Summarizer:
 
     def summarize(self, content: str) -> str:
         """Generate a summary. Run via inference_pool from the caller."""
-        # TODO(week 2):
-        # prompt = PROMPT_TEMPLATE.format(max_chars=SUMMARY_MAX_CHARS, content=content)
-        # return self.phi3.generate(prompt, max_tokens=200)[:SUMMARY_MAX_CHARS]
-        raise NotImplementedError("Vedansh — week 2 deliverable")
+        prompt = PROMPT_TEMPLATE.format(max_chars=SUMMARY_MAX_CHARS, content=content)
+        
+        # We ask Phi-3 to generate the response
+        result = self.phi3.generate(prompt, max_tokens=150)
+        
+        # Ensure we don't exceed the database column size limit
+        return result.strip()[:SUMMARY_MAX_CHARS]

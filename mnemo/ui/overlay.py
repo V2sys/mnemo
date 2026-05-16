@@ -2,73 +2,116 @@
 mnemo/ui/overlay.py
 Owner: Vedansh
 
-Spotlight-style search overlay using CustomTkinter.
-Runs on the main thread (Tkinter requirement).
-
-Lifecycle:
-  - hidden by default
-  - hotkey fires → show()
-  - user types → on Enter, call query_engine.handle()
-  - display results → user clicks one or presses Esc → hide()
+CustomTkinter search bar overlay.
+This runs on the MAIN thread. It acts like a Mac Spotlight search bar.
+For Checkpoint 1, it just needs to open, accept text, and close.
 """
 
-import logging
 import customtkinter as ctk
-
-from mnemo.ai.query_engine import QueryEngine
-from mnemo.actions.router import ActionRouter
-from mnemo.schema import QueryRequest, TOP_K_DEFAULT
+import logging
 
 log = logging.getLogger(__name__)
 
+# Set the overall theme
+ctk.set_appearance_mode("dark")
+ctk.set_default_color_theme("blue")
 
-class OverlayUI:
-    def __init__(
-        self,
-        query_engine: QueryEngine,
-        action_router: ActionRouter,
-    ) -> None:
-        self.query_engine = query_engine
-        self.action_router = action_router
-        self.root: ctk.CTk | None = None
-        self._visible = False
+class MnemoOverlay(ctk.CTk):
+    def __init__(self):
+        super().__init__()
 
-    def build(self) -> None:
-        """Construct the Tk window. Call once on main thread before run_main_loop."""
-        # TODO(week 4):
-        # ctk.set_appearance_mode("dark")
-        # ctk.set_default_color_theme("blue")
-        # self.root = ctk.CTk()
-        # self.root.overrideredirect(True)              # frameless
-        # self.root.attributes("-topmost", True)
-        # self.root.attributes("-alpha", 0.95)
-        # Center on screen, ~600x80 for search bar
-        # Add entry widget, bind <Return>, <Escape>, <FocusOut>
-        # Add result frame below entry, initially hidden
-        raise NotImplementedError("Vedansh — week 4 deliverable")
+        # --- Window Configuration ---
+        self.title("Mnemo Search")
+        # Keep window always on top of other apps
+        self.attributes("-topmost", True)
+        
+        # Dimensions - slightly taller and wider for a premium feel
+        self.width = 750
+        self.height = 75
+        
+        # Center the window on the screen
+        screen_width = self.winfo_screenwidth()
+        screen_height = self.winfo_screenheight()
+        x = (screen_width // 2) - (self.width // 2)
+        y = (screen_height // 3) - (self.height // 2)
+        self.geometry(f"{self.width}x{self.height}+{x}+{y}")
 
-    def show(self) -> None:
-        """Show the overlay and focus the search field."""
-        # TODO(week 4): called from hotkey thread via root.after(0, ...)
-        raise NotImplementedError("Vedansh — week 4 deliverable")
+        # --- UI Elements ---
+        # Deeper black for the true "floating" feel
+        bg_color = "#121212"
+        self.configure(fg_color=bg_color)
+        
+        # Main container frame
+        self.frame = ctk.CTkFrame(
+            self, 
+            corner_radius=0, 
+            fg_color=bg_color, 
+            border_width=2, 
+            border_color="#333333" # Soft grey border
+        )
+        self.frame.pack(fill="both", expand=True, padx=0, pady=0)
 
-    def hide(self) -> None:
-        # TODO(week 4)
-        raise NotImplementedError("Vedansh — week 4 deliverable")
+        # Icon Label (Visual Polish: Adds a nice visual anchor to the left)
+        self.icon_label = ctk.CTkLabel(
+            self.frame,
+            text="✨", # A spark/AI icon
+            font=("Segoe UI Emoji", 26),
+            text_color="#00a8ff" # A bright accent color
+        )
+        self.icon_label.pack(side="left", padx=(20, 5), pady=10)
 
-    def _on_submit(self, query: str) -> None:
-        """User pressed Enter. Run query in background, render result."""
-        # TODO(week 4):
-        # Run query_engine.handle on the inference_pool, not the UI thread.
-        # On result, use root.after(0, self._render) to come back to UI thread.
-        # If response.action is set, call self.action_router.execute(...)
-        raise NotImplementedError("Vedansh — week 4 deliverable")
+        # The input text box
+        self.search_input = ctk.CTkEntry(
+            self.frame, 
+            placeholder_text="What would you like to recall?",
+            placeholder_text_color="#666666",
+            font=("Segoe UI", 24),
+            fg_color="transparent",
+            border_width=0,
+            text_color="#ffffff"
+        )
+        self.search_input.pack(side="left", fill="both", expand=True, padx=(0, 20), pady=10)
+        self.search_input.focus() 
 
-    def run_main_loop(self) -> None:
-        """Block here; Tkinter event loop. Call last in main()."""
-        if self.root:
-            self.root.mainloop()
+        # --- Key & Event Bindings ---
+        self.bind("<Escape>", self.hide_window)
+        self.bind("<Return>", self.submit_query)
+        
+        # Visual Polish: Highlight the border when the user is typing
+        self.search_input.bind("<FocusIn>", self.on_focus_in)
+        self.search_input.bind("<FocusOut>", self.on_focus_out)
 
-    def shutdown(self) -> None:
-        if self.root:
-            self.root.quit()
+    def on_focus_in(self, event):
+        """Highlight the border with an accent color when active."""
+        self.frame.configure(border_color="#00a8ff") 
+
+    def on_focus_out(self, event):
+        """Restore normal border and hide when clicking away."""
+        self.frame.configure(border_color="#333333")
+        self.hide_window()
+
+    def submit_query(self, event=None):
+        query = self.search_input.get().strip()
+        if query:
+            print(f"\n[UI] User asked: '{query}'")
+            
+        self.search_input.delete(0, 'end')
+        self.hide_window()
+
+    def show_window(self):
+        """Called by the hotkey listener to reveal the UI."""
+        self.deiconify() 
+        self.search_input.focus()
+
+    def hide_window(self, event=None):
+        """Hides the UI without destroying the thread."""
+        self.withdraw() 
+        self.search_input.delete(0, 'end')
+
+if __name__ == "__main__":
+    print("Starting UI on main thread. Press 'Escape' to hide it.")
+    try:
+        app = MnemoOverlay()
+        app.mainloop()
+    except KeyboardInterrupt:
+        print("\nUI closed via terminal.")
