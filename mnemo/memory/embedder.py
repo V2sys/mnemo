@@ -24,27 +24,50 @@ class Embedder:
 
     def load(self) -> None:
         """Load the ONNX model and tokenizer. Call once at startup."""
-        # TODO(week 1):
-        # import onnxruntime as ort
-        # from tokenizers import Tokenizer
-        # self._session = ort.InferenceSession(str(EMBEDDING_MODEL_PATH))
-        # self._tokenizer = Tokenizer.from_file(str(EMBEDDING_TOKENIZER_PATH))
-        raise NotImplementedError("Vinayak — week 1 deliverable")
+        if not EMBEDDING_MODEL_PATH.exists() or not EMBEDDING_TOKENIZER_PATH.exists():
+            raise FileNotFoundError(
+                f"Embedding models not found at {EMBEDDING_MODEL_PATH}. "
+                "Please refer to docs/setup.md to download them."
+            )
+            
+        import onnxruntime as ort
+        from tokenizers import Tokenizer
+        
+        self._session = ort.InferenceSession(str(EMBEDDING_MODEL_PATH))
+        self._tokenizer = Tokenizer.from_file(str(EMBEDDING_TOKENIZER_PATH))
+        log.info(f"Embedder loaded successfully from {EMBEDDING_MODEL_PATH}")
 
     def encode(self, text: str) -> np.ndarray:
         """
         Encode text into a normalized embedding vector.
         Returns float32 array of length EMBEDDING_DIM.
         """
-        # TODO(week 1):
-        # 1. Tokenize text → input_ids, attention_mask
-        # 2. session.run([...]) → token embeddings
-        # 3. Mean pooling using attention_mask
-        # 4. L2 normalize
-        # 5. Return as float32 numpy array
-        raise NotImplementedError("Vinayak — week 1 deliverable")
+        self._tokenizer.enable_padding(length=256)
+        self._tokenizer.enable_truncation(max_length=256)
+        
+        encoded = self._tokenizer.encode(text)
+        input_ids = np.array([encoded.ids], dtype=np.int64)
+        attention_mask = np.array([encoded.attention_mask], dtype=np.int64)
+        token_type_ids = np.array([encoded.type_ids], dtype=np.int64)
+        
+        outputs = self._session.run(None, {
+            "input_ids": input_ids,
+            "attention_mask": attention_mask,
+            "token_type_ids": token_type_ids
+        })
+        
+        token_embeddings = outputs[0][0]
+        mask = attention_mask[0].reshape(-1, 1).astype(np.float32)
+        summed = (token_embeddings * mask).sum(axis=0)
+        mask_sum = mask.sum()
+        
+        mean_pooled = summed / np.maximum(mask_sum, 1e-9)
+        norm = np.linalg.norm(mean_pooled)
+        result = mean_pooled / np.maximum(norm, 1e-9)
+        
+        return result.astype(np.float32)
 
     def encode_batch(self, texts: list[str]) -> np.ndarray:
         """Encode multiple texts at once. Used for bulk indexing."""
-        # TODO(week 2): optional but useful for first-time directory scan
-        raise NotImplementedError("Vinayak — week 2 deliverable")
+        results = [self.encode(t) for t in texts]
+        return np.stack(results)
