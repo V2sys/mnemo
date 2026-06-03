@@ -90,8 +90,9 @@ def run_tests():
         assert isinstance(res["similarity"], float), f"Expected similarity to be float, got {type(res['similarity'])}"
         
         # summary might be None, empty, or "pending" (week 1 logic)
+        # OR it might be the raw_text fallback (our new improved logic)
         summary = res["summary"]
-        assert summary is None or summary == "" or "pending" in summary.lower(), f"Unexpected summary content: '{summary}'"
+        assert summary, "Summary should not be empty (should fallback to raw text)"
         
         # Sanity check for similarity (cosine distance; 0 is identical, >0.3 is usually relevant)
         # Note: Depending on backend, lower score might mean closer or distance.

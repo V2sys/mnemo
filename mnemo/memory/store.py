@@ -113,10 +113,10 @@ class MemoryStore:
             query_blob = query_vector.astype(np.float32).tobytes()
             
             if self._has_vec:
-                base_query = "SELECT m.type, m.summary, m.timestamp, vec_distance_cosine(e.vector, ?) as similarity FROM embeddings e JOIN memories m ON e.memory_id = m.id"
+                base_query = "SELECT m.type, m.summary, m.timestamp, vec_distance_cosine(e.vector, ?) as similarity, m.raw_text FROM embeddings e JOIN memories m ON e.memory_id = m.id"
                 params = [query_blob]
             else:
-                base_query = "SELECT m.type, m.summary, m.timestamp, e.vector as vec_blob FROM embeddings e JOIN memories m ON e.memory_id = m.id"
+                base_query = "SELECT m.type, m.summary, m.timestamp, e.vector as vec_blob, m.raw_text FROM embeddings e JOIN memories m ON e.memory_id = m.id"
                 params = []
                 
             if type_filter is not None and len(type_filter) > 0:
@@ -134,9 +134,14 @@ class MemoryStore:
             results: list[QuerySource] = []
             if self._has_vec:
                 for r in rows:
+                    summary_val = r[1]
+                    raw_text_val = r[4]
+                    if not summary_val or summary_val == "pending":
+                        summary_val = (raw_text_val or "")[:500] + ("..." if raw_text_val and len(raw_text_val) > 500 else "")
+                        
                     results.append({
                         "type": r[0],
-                        "summary": r[1] or "",
+                        "summary": summary_val,
                         "timestamp": r[2],
                         "similarity": float(r[3])
                     })
@@ -145,9 +150,15 @@ class MemoryStore:
                 for r in rows:
                     v = np.frombuffer(r[3], dtype=np.float32)
                     sim = 1.0 - np.dot(query_vector, v)
+                    
+                    summary_val = r[1]
+                    raw_text_val = r[4]
+                    if not summary_val or summary_val == "pending":
+                        summary_val = (raw_text_val or "")[:500] + ("..." if raw_text_val and len(raw_text_val) > 500 else "")
+                        
                     scored_rows.append((sim, {
                         "type": r[0],
-                        "summary": r[1] or "",
+                        "summary": summary_val,
                         "timestamp": r[2]
                     }))
                 scored_rows.sort(key=lambda x: x[0])
