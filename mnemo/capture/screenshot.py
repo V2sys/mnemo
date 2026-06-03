@@ -57,9 +57,9 @@ class ScreenshotEngine:
                 diff = current_hash - self._last_hash
                 # threshold: skip if fewer than 13 bits differ (~20% of 64)
                 threshold_bits = int(SCREENSHOT_HASH_DIFF_THRESHOLD * 64)
-                log.debug(f"Screenshot diff={diff} bits (threshold={threshold_bits})")
+                log.info(f"Screenshot diff={diff} bits (threshold={threshold_bits})")
                 if diff < threshold_bits:
-                    log.debug(f"Screenshot skipped — diff={diff} bits (threshold={threshold_bits})")
+                    log.info(f"Screenshot skipped — diff={diff} bits (threshold={threshold_bits})")
                     return None
             
             self._last_hash = current_hash
