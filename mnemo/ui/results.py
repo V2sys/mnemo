@@ -7,6 +7,7 @@ Handles: answer text, source chips, low-confidence styling, action confirmations
 """
 
 import logging
+
 import customtkinter as ctk
 
 from mnemo.schema import QueryResponse

@@ -10,9 +10,7 @@ All data shapes, enums, and tunable thresholds live here. Both layers
 import from here. Neither layer defines its own version of anything below.
 """
 
-from dataclasses import dataclass, field
-from typing import Optional, Literal, TypedDict
-
+from typing import Literal, TypedDict
 
 # ─────────────────────────────────────────────────────────────────
 # Enums
@@ -86,9 +84,9 @@ class MemoryRecord(TypedDict):
     type: MemoryType
     source: str                  # file path, or "app_name - window_title"
     content_hash: str            # MD5 of raw_text, used for dedup
-    raw_text: Optional[str]      # nullable after RAW_TEXT_RETENTION_DAYS
+    raw_text: str | None      # nullable after RAW_TEXT_RETENTION_DAYS
     raw_text_expires: int        # Unix timestamp
-    summary: Optional[str]       # None for activity, may be None for short files
+    summary: str | None       # None for activity, may be None for short files
     timestamp: int
     metadata: str                # JSON string
 
@@ -97,7 +95,7 @@ class QueryRequest(TypedDict):
     """UI → Vedansh's query_engine."""
     query: str
     top_k: int                              # default TOP_K_DEFAULT
-    type_filter: Optional[list[MemoryType]] # None = all types
+    type_filter: list[MemoryType] | None # None = all types
 
 
 class QuerySource(TypedDict):
@@ -119,7 +117,7 @@ class QueryResponse(TypedDict):
     response_type: ResponseType
     text: str
     sources: list[QuerySource]
-    action: Optional[ActionPayload]
+    action: ActionPayload | None
     confidence: Literal["high", "low"]   # "low" when below SIMILARITY_THRESHOLD
 
 

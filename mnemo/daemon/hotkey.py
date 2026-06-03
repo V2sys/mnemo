@@ -16,9 +16,9 @@ Note: `keyboard` requires admin on some systems; document in setup.md.
 import logging
 import queue
 import threading
-from typing import Callable
+from collections.abc import Callable
 
-from mnemo.config import SUMMON_HOTKEY, SCREENSHOT_HOTKEY
+from mnemo.config import SCREENSHOT_HOTKEY, SUMMON_HOTKEY
 
 log = logging.getLogger(__name__)
 
@@ -36,19 +36,33 @@ class HotkeyManager:
 
     def start_background(self) -> None:
         """Register global hotkeys on a background thread."""
-        # TODO(week 1):
-        # import keyboard
-        # keyboard.add_hotkey(SUMMON_HOTKEY, self._on_summon_event)
-        # keyboard.add_hotkey(SCREENSHOT_HOTKEY, self._on_screenshot_event)
-        # keyboard.wait() inside self._thread
-        raise NotImplementedError("Vinayak — week 1 deliverable")
+        def _run():
+            try:
+                import keyboard
+                keyboard.add_hotkey(SUMMON_HOTKEY, self._on_summon_event)
+                keyboard.add_hotkey(SCREENSHOT_HOTKEY, self._on_screenshot_event)
+                log.info(f"Registered hotkeys: {SUMMON_HOTKEY} (summon), {SCREENSHOT_HOTKEY} (screenshot)")
+                keyboard.wait()
+            except ImportError:
+                log.warning("keyboard library not available or requires root. Hotkeys disabled.")
+            except Exception as e:
+                log.error(f"Failed to register hotkeys: {e}")
+
+        self._thread = threading.Thread(target=_run, daemon=True, name="HotkeyManager")
+        self._thread.start()
 
     def _on_summon_event(self) -> None:
         log.info("Summon hotkey fired")
         self.events.put("summon")
-        self.on_summon()
+        try:
+            self.on_summon()
+        except Exception as e:
+            log.error(f"Error in on_summon callback: {e}")
 
     def _on_screenshot_event(self) -> None:
         log.info("Screenshot hotkey fired")
         self.events.put("screenshot")
-        self.on_screenshot()
+        try:
+            self.on_screenshot()
+        except Exception as e:
+            log.error(f"Error in on_screenshot callback: {e}")
