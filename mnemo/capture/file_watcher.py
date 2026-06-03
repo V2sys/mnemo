@@ -11,27 +11,33 @@ Pipeline:
 Runs on its own thread (watchdog manages this).
 """
 
-import logging
 import hashlib
-import time
 import json
+import logging
+import time
 from pathlib import Path
 
 from watchdog.events import FileSystemEventHandler
 from watchdog.observers import Observer
 
-from mnemo.schema import SUPPORTED_FILE_TYPES, FileCapture, MemoryRecord, FILE_SUMMARY_CHAR_THRESHOLD
-from mnemo.memory.store import MemoryStore
+from mnemo.ai.summarizer import Summarizer
 from mnemo.memory.embedder import Embedder
+from mnemo.memory.store import MemoryStore
+from mnemo.schema import (
+    FILE_SUMMARY_CHAR_THRESHOLD,
+    SUPPORTED_FILE_TYPES,
+    MemoryRecord,
+)
 
 log = logging.getLogger(__name__)
 
 
 class FileWatcher(FileSystemEventHandler):
-    def __init__(self, watch_dirs: tuple[Path, ...], store: MemoryStore, embedder: Embedder) -> None:
+    def __init__(self, watch_dirs: tuple[Path, ...], store: MemoryStore, embedder: Embedder, summarizer: Summarizer = None) -> None:
         self.watch_dirs = watch_dirs
         self._store = store
         self._embedder = embedder
+        self._summarizer = summarizer
         self._observer = None
 
     def start_background(self) -> None:
@@ -74,8 +80,15 @@ class FileWatcher(FileSystemEventHandler):
         embedding = self._embedder.encode(text)
         
         summary = None
-        if len(text) > FILE_SUMMARY_CHAR_THRESHOLD:
-            summary = "pending"
+        if self._summarizer is not None and len(text) > FILE_SUMMARY_CHAR_THRESHOLD:
+            try:
+                from mnemo.ai.phi3 import inference_pool
+                future = inference_pool.submit(self._summarizer.summarize, text)
+                summary = future.result(timeout=60)
+                log.info(f"Summary generated for {path.name}")
+            except Exception as e:
+                log.warning(f"Summarization failed for {path.name}: {e}")
+                summary = None
             
         record: MemoryRecord = {
             "type": "file",

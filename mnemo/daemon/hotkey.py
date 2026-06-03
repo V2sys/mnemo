@@ -16,9 +16,9 @@ Note: `keyboard` requires admin on some systems; document in setup.md.
 import logging
 import queue
 import threading
-from typing import Callable
+from collections.abc import Callable
 
-from mnemo.config import SUMMON_HOTKEY, SCREENSHOT_HOTKEY
+from mnemo.config import SCREENSHOT_HOTKEY, SUMMON_HOTKEY
 
 log = logging.getLogger(__name__)
 

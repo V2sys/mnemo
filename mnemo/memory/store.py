@@ -12,17 +12,16 @@ import logging
 import sqlite3
 import threading
 import time
-from typing import Optional
 
 import numpy as np
 
 import mnemo.config
 from mnemo.schema import (
+    RAW_TEXT_RETENTION_DAYS,
     SCHEMA_SQL,
     MemoryRecord,
-    QuerySource,
     MemoryType,
-    RAW_TEXT_RETENTION_DAYS,
+    QuerySource,
 )
 
 log = logging.getLogger(__name__)
@@ -102,7 +101,7 @@ class MemoryStore:
         self,
         query_vector: np.ndarray,
         top_k: int,
-        type_filter: Optional[list[MemoryType]] = None,
+        type_filter: list[MemoryType] | None = None,
     ) -> list[QuerySource]:
         """
         Vector similarity search.
@@ -157,7 +156,7 @@ class MemoryStore:
                     
             return results
 
-    def find_by_hash(self, content_hash: str) -> Optional[int]:
+    def find_by_hash(self, content_hash: str) -> int | None:
         """Lookup memory_id by content_hash. Used for file dedup."""
         with self._lock:
             cursor = self._conn.cursor()

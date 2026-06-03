@@ -13,7 +13,7 @@ Returns: a single string summary, capped at SUMMARY_MAX_CHARS.
 
 import logging
 
-from mnemo.ai.phi3 import Phi3Engine, inference_pool
+from mnemo.ai.phi3 import Phi3Engine
 from mnemo.schema import SUMMARY_MAX_CHARS
 
 log = logging.getLogger(__name__)

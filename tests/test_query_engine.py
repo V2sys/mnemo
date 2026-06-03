@@ -1,15 +1,16 @@
 import sys
-import os
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
+import tempfile
+
+import mnemo.config as config
 from mnemo.ai.phi3 import Phi3Engine
+from mnemo.ai.query_engine import QueryEngine
 from mnemo.memory.embedder import Embedder
 from mnemo.memory.store import MemoryStore
-from mnemo.ai.query_engine import QueryEngine
-import mnemo.config as config
-import tempfile
+
 
 def test_engine():
     print("Setting up test environment...")

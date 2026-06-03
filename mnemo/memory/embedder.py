@@ -9,10 +9,10 @@ Heavy: model loads once at startup, then encode() is fast.
 """
 
 import logging
+
 import numpy as np
 
 from mnemo.config import EMBEDDING_MODEL_PATH, EMBEDDING_TOKENIZER_PATH
-from mnemo.schema import EMBEDDING_DIM
 
 log = logging.getLogger(__name__)
 

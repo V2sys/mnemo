@@ -16,7 +16,8 @@ Stays off the main thread — main thread is reserved for the UI (Tkinter).
 
 import logging
 import threading
-from typing import Callable, Optional
+from collections.abc import Callable
+
 import pystray
 from PIL import Image, ImageDraw
 
@@ -24,7 +25,7 @@ log = logging.getLogger(__name__)
 
 
 class TrayDaemon:
-    def __init__(self, on_quit: Callable[[], None], on_summon: Optional[Callable[[], None]] = None) -> None:
+    def __init__(self, on_quit: Callable[[], None], on_summon: Callable[[], None] | None = None) -> None:
         self.on_quit = on_quit
         self.on_summon = on_summon
         self._icon = None

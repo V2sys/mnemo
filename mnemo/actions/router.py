@@ -7,11 +7,8 @@ Each handler is small and safe — no shell execution of arbitrary strings.
 """
 
 import logging
-import os
-import subprocess
-from pathlib import Path
 
-from mnemo.schema import ActionPayload, ACTION_TYPES
+from mnemo.schema import ActionPayload
 
 log = logging.getLogger(__name__)
 

@@ -7,8 +7,9 @@ This runs on the MAIN thread. It acts like a Mac Spotlight search bar.
 For Checkpoint 1, it just needs to open, accept text, and close.
 """
 
-import customtkinter as ctk
 import logging
+
+import customtkinter as ctk
 
 log = logging.getLogger(__name__)
 

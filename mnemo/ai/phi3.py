@@ -12,7 +12,6 @@ and keeps the model loaded between calls without thrashing.
 
 import logging
 from concurrent.futures import ThreadPoolExecutor
-from typing import Optional
 
 from mnemo.config import PHI3_MODEL_PATH
 
@@ -46,10 +45,10 @@ class Phi3Engine:
                 verbose=False,
             )
             log.info("Phi-3 Mini loaded successfully.")
-        except ImportError:
+        except ImportError as e:
             raise ImportError(
                 "llama-cpp-python is not installed. Please install it using the requirements.txt."
-            )
+            ) from e
 
     def generate(
         self,

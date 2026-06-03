@@ -15,13 +15,12 @@ from mnemo.ai.phi3 import Phi3Engine, inference_pool
 from mnemo.memory.embedder import Embedder
 from mnemo.memory.store import MemoryStore
 from mnemo.schema import (
+    SIMILARITY_THRESHOLD,
+    TOP_K_DEFAULT,
+    ActionPayload,
     QueryRequest,
     QueryResponse,
     QuerySource,
-    ActionPayload,
-    SIMILARITY_THRESHOLD,
-    TOP_K_DEFAULT,
-    NOT_FOUND_FALLBACK,
 )
 
 log = logging.getLogger(__name__)

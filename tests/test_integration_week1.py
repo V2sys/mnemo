@@ -6,14 +6,12 @@ Tests the full pipeline:
 File (Capture) -> Embedder (AI) -> Store (Memory) -> Search (Retrieval)
 """
 
-import os
-import sys
-import time
-import json
-import shutil
-import tempfile
-import platform
 import logging
+import platform
+import shutil
+import sys
+import tempfile
+import time
 from pathlib import Path
 
 import numpy as np
@@ -21,11 +19,10 @@ import numpy as np
 # Ensure project root is in path
 sys.path.insert(0, str(Path(__file__).parent.parent))
 
-from mnemo.memory.store import MemoryStore
-from mnemo.memory.embedder import Embedder
+from mnemo import config, schema
 from mnemo.capture.file_watcher import FileWatcher
-from mnemo import schema
-from mnemo import config
+from mnemo.memory.embedder import Embedder
+from mnemo.memory.store import MemoryStore
 
 # Configure logging to be quiet during tests
 logging.basicConfig(level=logging.ERROR)

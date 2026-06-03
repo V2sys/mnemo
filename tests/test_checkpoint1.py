@@ -1,10 +1,17 @@
+import sys
 import time
-import numpy as np
 from pathlib import Path
+
+import numpy as np
+
+# Ensure project root is in path
+sys.path.insert(0, str(Path(__file__).parent.parent))
+
+import mnemo.config as config
+from mnemo.capture.file_watcher import extract_text
 from mnemo.memory.embedder import Embedder
 from mnemo.memory.store import MemoryStore
-from mnemo.capture.file_watcher import extract_text
-import mnemo.config as config
+
 
 def test_embedder():
     print("Testing Embedder...")
