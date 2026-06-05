@@ -146,4 +146,4 @@ See [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) for branching strategy, schema 
 
 ## License
 
-Apache 2.0 — see [LICENSE](LICENSE).
+Apache 2.0 — see [LICENSE](LICENSE). 

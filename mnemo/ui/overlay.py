@@ -18,8 +18,9 @@ ctk.set_appearance_mode("dark")
 ctk.set_default_color_theme("blue")
 
 class MnemoOverlay(ctk.CTk):
-    def __init__(self):
+    def __init__(self, on_submit=None):
         super().__init__()
+        self.on_submit = on_submit
 
         # --- Window Configuration ---
         self.title("Mnemo Search")
@@ -95,6 +96,9 @@ class MnemoOverlay(ctk.CTk):
         query = self.search_input.get().strip()
         if query:
             print(f"\n[UI] User asked: '{query}'")
+            if self.on_submit:
+                import threading
+                threading.Thread(target=self.on_submit, args=(query,), daemon=True).start()
             
         self.search_input.delete(0, 'end')
         self.hide_window()

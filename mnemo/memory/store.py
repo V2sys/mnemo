@@ -112,10 +112,10 @@ class MemoryStore:
             query_blob = query_vector.astype(np.float32).tobytes()
             
             if self._has_vec:
-                base_query = "SELECT m.type, m.summary, m.timestamp, vec_distance_cosine(e.vector, ?) as similarity, m.raw_text FROM embeddings e JOIN memories m ON e.memory_id = m.id"
+                base_query = "SELECT m.type, m.summary, m.timestamp, vec_distance_cosine(e.vector, ?) as similarity, m.raw_text, m.source FROM embeddings e JOIN memories m ON e.memory_id = m.id"
                 params = [query_blob]
             else:
-                base_query = "SELECT m.type, m.summary, m.timestamp, e.vector as vec_blob, m.raw_text FROM embeddings e JOIN memories m ON e.memory_id = m.id"
+                base_query = "SELECT m.type, m.summary, m.timestamp, e.vector as vec_blob, m.raw_text, m.source FROM embeddings e JOIN memories m ON e.memory_id = m.id"
                 params = []
                 
             if type_filter is not None and len(type_filter) > 0:
@@ -140,6 +140,7 @@ class MemoryStore:
                         
                     results.append({
                         "type": r[0],
+                        "source": r[5],
                         "summary": summary_val,
                         "timestamp": r[2],
                         "similarity": float(r[3])
@@ -157,6 +158,7 @@ class MemoryStore:
                         
                     scored_rows.append((sim, {
                         "type": r[0],
+                        "source": r[5],
                         "summary": summary_val,
                         "timestamp": r[2]
                     }))

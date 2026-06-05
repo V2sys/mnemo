@@ -37,7 +37,11 @@ class Summarizer:
 
     def summarize(self, content: str) -> str:
         """Generate a summary. Run via inference_pool from the caller."""
-        prompt = PROMPT_TEMPLATE.format(max_chars=SUMMARY_MAX_CHARS, content=content)
+        # Truncate content to avoid exceeding Phi-3's 4096 token context window
+        # 4096 tokens is roughly ~16,000 chars. We truncate to 10,000 chars to be safe.
+        safe_content = content[:10000]
+        
+        prompt = PROMPT_TEMPLATE.format(max_chars=SUMMARY_MAX_CHARS, content=safe_content)
         
         # We ask Phi-3 to generate the response
         result = self.phi3.generate(prompt, max_tokens=150)

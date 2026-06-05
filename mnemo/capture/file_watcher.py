@@ -77,13 +77,16 @@ class FileWatcher(FileSystemEventHandler):
             log.info(f"skipped (unchanged): {path}")
             return
             
-        embedding = self._embedder.encode(text)
+        # Prepend the filename so the vector database and the summarizer know what file this is!
+        content_with_metadata = f"File Name: {path.name}\n\n{text}"
+        
+        embedding = self._embedder.encode(content_with_metadata)
         
         summary = None
         if self._summarizer is not None and len(text) > FILE_SUMMARY_CHAR_THRESHOLD:
             try:
                 from mnemo.ai.phi3 import inference_pool
-                future = inference_pool.submit(self._summarizer.summarize, text)
+                future = inference_pool.submit(self._summarizer.summarize, content_with_metadata)
                 summary = future.result(timeout=60)
                 log.info(f"Summary generated for {path.name}")
             except Exception as e:

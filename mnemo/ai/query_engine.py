@@ -100,7 +100,8 @@ class QueryEngine:
         best_sim = sources[0]["similarity"]
         # Note: Depending on the backend, similarity might be distance (closer to 0 is better) 
         # or cosine similarity (closer to 1 is better). Assuming cosine similarity here based on schema.
-        confidence: Literal["high", "low"] = "high" if best_sim >= SIMILARITY_THRESHOLD else "low"
+        # FIX: The backend actually computes vector distance, so a lower value is better!
+        confidence: Literal["high", "low"] = "high" if best_sim <= SIMILARITY_THRESHOLD else "low"
         
         # d. Synthesize answer using Phi-3
         answer = self._synthesize(query, sources)
@@ -135,8 +136,9 @@ class QueryEngine:
         context_blocks = []
         for i, source in enumerate(sources):
             mem_type = source["type"].upper()
+            src_name = source.get("source", "Unknown")
             summary = source["summary"]
-            context_blocks.append(f"[{i+1}] ({mem_type} MEMORY): {summary}")
+            context_blocks.append(f"[{i+1}] ({mem_type} MEMORY from '{src_name}'): {summary}")
             
         context_string = "\n\n".join(context_blocks)
         

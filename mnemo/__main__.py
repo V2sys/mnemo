@@ -8,10 +8,12 @@ import time
 from mnemo import config
 from mnemo.ai.phi3 import Phi3Engine
 from mnemo.ai.summarizer import Summarizer
+from mnemo.ai.query_engine import QueryEngine
 from mnemo.capture.file_watcher import FileWatcher
 from mnemo.capture.screenshot import ScreenshotEngine
 from mnemo.daemon.hotkey import HotkeyManager
 from mnemo.daemon.tray import TrayDaemon
+from mnemo.ui.overlay import MnemoOverlay
 from mnemo.memory.embedder import Embedder
 from mnemo.memory.store import MemoryStore
 from mnemo.schema import RAW_TEXT_RETENTION_DAYS
@@ -103,12 +105,39 @@ def main():
 
     screenshot_engine = ScreenshotEngine(on_capture=on_screenshot_taken)
 
-    def on_summon():
-        log.info("summon fired — UI not wired yet")
+    query_engine = QueryEngine(phi3=phi3, embedder=embedder, store=store)
 
-    shutdown_event = threading.Event()
+    def handle_query(query_text: str):
+        from mnemo.schema import QueryRequest
+        request: QueryRequest = {
+            "query": query_text,
+            "top_k": 3,
+            "type_filter": None
+        }
+        print(f"\nProcessing query: '{query_text}'...")
+        try:
+            response = query_engine.handle(request)
+            print("\n--- Response ---")
+            print(f"Intent classified as: {response['response_type'].upper()}")
+            print(f"Confidence: {response['confidence'].upper()}")
+            print(f"\nAnswer:\n{response['text']}")
+            print("\nSources retrieved:")
+            for i, src in enumerate(response['sources']):
+                print(f"  [{i+1}] {src['type'].upper()} ({src.get('source', 'Unknown')}): {src['summary'][:100]}...")
+            print("----------------\n")
+        except Exception as e:
+            print(f"Query failed: {e}")
+
+    # Initialize UI on the main thread
+    app = MnemoOverlay(on_submit=handle_query)
+
+    def on_summon():
+        log.info("summon fired")
+        # CustomTkinter needs to run GUI updates on the main thread
+        app.after(0, app.show_window)
+
     def on_quit():
-        shutdown_event.set()
+        app.quit()
 
     tray = TrayDaemon(on_quit=on_quit, on_summon=on_summon)
     tray.start_background()
@@ -122,8 +151,7 @@ def main():
     log.info("Mnemo is running. Press Ctrl+Space to summon.")
     
     try:
-        while not shutdown_event.is_set():
-            shutdown_event.wait(1)
+        app.mainloop()
     except KeyboardInterrupt:
         log.info("Keyboard interrupt received.")
     finally:

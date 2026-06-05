@@ -101,6 +101,7 @@ class QueryRequest(TypedDict):
 class QuerySource(TypedDict):
     """A single retrieved memory shown to the user as a source."""
     type: MemoryType
+    source: str
     summary: str
     timestamp: int
     similarity: float
