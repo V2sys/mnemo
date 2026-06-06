@@ -35,6 +35,26 @@ Request: {query}
 <|assistant|>"""
 
 
+ACTION_PROMPT = """<|user|>
+Parse the following user command into a strict JSON object.
+The "type" must be exactly one of: "file_open", "app_launch", or "system_command".
+- Use "app_launch" for opening or launching software applications (like notepad, calculator, chrome).
+- Use "file_open" ONLY for opening specific documents or files with extensions (like report.pdf, notes.txt).
+- Use "system_command" for OS actions (like lock screen, sleep).
+
+The "target" should be the name of the file, the application, or the specific command.
+
+Request: {query}
+
+Respond ONLY with valid JSON. Do not include markdown code blocks or explanations.
+Example 1:
+{{"type": "app_launch", "target": "calculator"}}
+Example 2:
+{{"type": "file_open", "target": "document.txt"}}
+<|end|>
+<|assistant|>"""
+
+
 SYNTHESIS_PROMPT = """<|user|>
 The user asked: {query}
 
@@ -67,12 +87,10 @@ class QueryEngine:
         
         # 2. Handle ACTION
         if intent == "ACTION":
-            # For Checkpoint 2, we just return a placeholder action.
-            # Parsing complex actions is Week 3!
-            action_payload: ActionPayload = {"type": "system_command", "target": query}
+            action_payload = self._parse_action(query)
             return {
                 "response_type": "action",
-                "text": "Executing command...",
+                "text": f"Executing action: {action_payload['type']} on '{action_payload['target']}'...",
                 "sources": [],
                 "action": action_payload,
                 "confidence": "high"
@@ -127,8 +145,31 @@ class QueryEngine:
 
     def _parse_action(self, query: str) -> ActionPayload:
         """Parse an action command into an ActionPayload."""
-        # TODO(week 3): use Phi-3 with a strict JSON output prompt
-        raise NotImplementedError("Vedansh — week 3 deliverable")
+        prompt = ACTION_PROMPT.format(query=query)
+        future = inference_pool.submit(self.phi3.generate, prompt=prompt, max_tokens=50, temperature=0.1)
+        response = future.result().strip()
+        
+        # Clean markdown code blocks if the LLM adds them
+        if response.startswith("```json"):
+            response = response[7:]
+        elif response.startswith("```"):
+            response = response[3:]
+        if response.endswith("```"):
+            response = response[:-3]
+            
+        response = response.strip()
+        
+        import json
+        try:
+            data = json.loads(response)
+            return {
+                "type": data.get("type", "system_command"),
+                "target": data.get("target", query)
+            }
+        except Exception as e:
+            log.warning(f"Failed to parse action JSON: {response}")
+            # Fallback
+            return {"type": "system_command", "target": query}
 
     def _synthesize(self, query: str, sources: list[QuerySource]) -> str:
         """Generate the natural-language answer."""
