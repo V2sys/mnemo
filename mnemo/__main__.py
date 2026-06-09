@@ -83,6 +83,14 @@ def main():
         log.warning(f"Phi-3 engine failed to load: {e}. Summarization disabled.")
 
     file_watcher = FileWatcher(config.WATCH_DIRS, store, embedder, summarizer)
+    
+    log.info("Running first-run bulk index...")
+    try:
+        file_watcher.bulk_index_directory()
+    except Exception as e:
+        log.warning("Bulk index failed: %s — continuing anyway", e)
+    log.info("Bulk index done. Starting file watcher...")
+        
     file_watcher.start_background()
 
     activity_monitor = ActivityMonitor(store=store)
