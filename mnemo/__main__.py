@@ -6,12 +6,13 @@ import threading
 import time
 
 from mnemo import config
-from mnemo.ai.phi3 import Phi3Engine
+from mnemo.ai.phi3 import Phi3Engine, inference_pool
 from mnemo.ai.summarizer import Summarizer
 from mnemo.ai.query_engine import QueryEngine
 from mnemo.actions.router import ActionRouter
 from mnemo.capture.file_watcher import FileWatcher
 from mnemo.capture.screenshot import ScreenshotEngine
+from mnemo.capture.activity import ActivityMonitor
 from mnemo.daemon.hotkey import HotkeyManager
 from mnemo.daemon.tray import TrayDaemon
 from mnemo.ui.overlay import MnemoOverlay
@@ -19,6 +20,10 @@ from mnemo.memory.embedder import Embedder
 from mnemo.memory.store import MemoryStore
 from mnemo.schema import RAW_TEXT_RETENTION_DAYS
 
+# Model unloading configuration
+IDLE_UNLOAD_SECONDS = 300  # 5 minutes
+_unload_timer: threading.Timer | None = None
+_phi3: Phi3Engine | None = None
 
 def setup_logging():
     log_format = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -28,7 +33,30 @@ def setup_logging():
     file_handler.setFormatter(logging.Formatter(log_format))
     logging.getLogger().addHandler(file_handler)
 
+def _do_unload():
+    global _phi3
+    if _phi3 and _phi3.is_loaded:
+        _phi3.unload()
+        logging.getLogger(__name__).info("Phi-3 unloaded after idle period.")
+
+def _schedule_unload():
+    global _unload_timer
+    if _unload_timer:
+        _unload_timer.cancel()
+    _unload_timer = threading.Timer(IDLE_UNLOAD_SECONDS, _do_unload)
+    _unload_timer.daemon = True
+    _unload_timer.start()
+
+def _on_query_started():
+    """Called before every query to ensure model is loaded."""
+    global _phi3
+    if _phi3 and not _phi3.is_loaded:
+        logging.getLogger(__name__).info("Reloading Phi-3 on demand...")
+        _phi3.load()
+    _schedule_unload()
+
 def main():
+    global _phi3
     config.ensure_dirs()
     setup_logging()
     log = logging.getLogger(__name__)
@@ -45,16 +73,29 @@ def main():
         log.error("Please refer to docs/setup.md for instructions.")
         sys.exit(1)
 
-    phi3 = Phi3Engine()
+    _phi3 = Phi3Engine()
     summarizer = None
     try:
-        phi3.load()
-        summarizer = Summarizer(phi3)
+        _phi3.load()
+        summarizer = Summarizer(_phi3)
+        _schedule_unload()  # Start the idle timer after initial load
     except Exception as e:
         log.warning(f"Phi-3 engine failed to load: {e}. Summarization disabled.")
 
     file_watcher = FileWatcher(config.WATCH_DIRS, store, embedder, summarizer)
+    
+    log.info("Running first-run bulk index...")
+    try:
+        file_watcher.bulk_index_directory()
+    except Exception as e:
+        log.warning("Bulk index failed: %s — continuing anyway", e)
+    log.info("Bulk index done. Starting file watcher...")
+        
     file_watcher.start_background()
+
+    activity_monitor = ActivityMonitor(store=store)
+    activity_monitor.set_enabled(config.DEFAULT_MODE == "memory")
+    activity_monitor.start_background()
 
     def on_screenshot_taken(capture):
         """Called by ScreenshotEngine after a successful capture."""
@@ -62,9 +103,11 @@ def main():
             return  # nothing to store
 
         # Get summary if summarizer is available
+        summary = None
         if summarizer is not None and capture["ocr_text"]:
             try:
-                from mnemo.ai.phi3 import inference_pool
+                # Ensure model is loaded for summarization
+                _on_query_started()
                 future = inference_pool.submit(
                     summarizer.summarize, capture["ocr_text"]
                 )
@@ -106,11 +149,15 @@ def main():
 
     screenshot_engine = ScreenshotEngine(on_capture=on_screenshot_taken)
 
-    query_engine = QueryEngine(phi3=phi3, embedder=embedder, store=store)
+    query_engine = QueryEngine(phi3=_phi3, embedder=embedder, store=store)
     action_router = ActionRouter()
 
     def handle_query(query_text: str):
         from mnemo.schema import QueryRequest
+        
+        # Ensure model is loaded before handling query
+        _on_query_started()
+        
         request: QueryRequest = {
             "query": query_text,
             "top_k": 3,
@@ -152,7 +199,15 @@ def main():
     def on_quit():
         app.quit()
 
-    tray = TrayDaemon(on_quit=on_quit, on_summon=on_summon)
+    def on_mode_change(is_memory_mode: bool):
+        activity_monitor.set_enabled(is_memory_mode)
+
+    tray = TrayDaemon(
+        on_quit=on_quit, 
+        on_summon=on_summon,
+        on_mode_change=on_mode_change,
+        initial_memory_mode=(config.DEFAULT_MODE == "memory")
+    )
     tray.start_background()
 
     hotkey = HotkeyManager(
@@ -169,6 +224,9 @@ def main():
         log.info("Keyboard interrupt received.")
     finally:
         log.info("Shutting down...")
+        if _unload_timer:
+            _unload_timer.cancel()
+        activity_monitor.shutdown()
         store.close()
         tray.shutdown()
         sys.exit(0)

@@ -50,6 +50,45 @@ class FileWatcher(FileSystemEventHandler):
                 log.info(f"Watching directory: {p}")
         self._observer.start()
 
+    def bulk_index_directory(self) -> None:
+        """
+        Scan all WATCH_DIRS recursively on startup and index any
+        file not already in the store. Skips files whose content
+        hash is already present (dedup). Runs once on first boot.
+        Called from __main__.py before start_background().
+        """
+        total = 0
+        skipped = 0
+        errors = 0
+
+        for watch_dir in self.watch_dirs:
+            if not watch_dir.exists():
+                log.warning("Watch dir does not exist: %s", watch_dir)
+                continue
+
+            log.info("Bulk indexing: %s", watch_dir)
+            for path in watch_dir.rglob("*"):
+                if not path.is_file():
+                    continue
+                if path.suffix.lower() not in SUPPORTED_FILE_TYPES:
+                    continue
+                # Skip files larger than 10MB — too slow to index at startup
+                if path.stat().st_size > 10 * 1024 * 1024:
+                    log.debug("Skipping large file: %s", path.name)
+                    skipped += 1
+                    continue
+                try:
+                    self._process(path)
+                    total += 1
+                except Exception as e:
+                    log.warning("Bulk index error for %s: %s", path.name, e)
+                    errors += 1
+
+        log.info(
+            "Bulk index complete — indexed: %d, skipped: %d, errors: %d",
+            total, skipped, errors
+        )
+
     def on_modified(self, event) -> None:
         if event.is_directory:
             return

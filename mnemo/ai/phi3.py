@@ -50,6 +50,19 @@ class Phi3Engine:
                 "llama-cpp-python is not installed. Please install it using the requirements.txt."
             ) from e
 
+    def unload(self) -> None:
+        """Release model from memory."""
+        if self._llm is not None:
+            del self._llm
+            self._llm = None
+            import gc
+            gc.collect()
+            log.info("Phi-3 unloaded from memory")
+
+    @property
+    def is_loaded(self) -> bool:
+        return self._llm is not None
+
     def generate(
         self,
         prompt: str,

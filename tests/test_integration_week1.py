@@ -86,9 +86,11 @@ def run_tests():
         assert res["type"] == "file", f"Expected type 'file', got {res['type']}"
         assert isinstance(res["similarity"], float), f"Expected similarity to be float, got {type(res['similarity'])}"
         
-        # summary might be None, empty, or "pending" (week 1 logic)
+        # summary might be None, empty, "pending", or a snippet of raw text (new fallback)
         summary = res["summary"]
-        assert summary is None or summary == "" or "pending" in summary.lower(), f"Unexpected summary content: '{summary}'"
+        assert isinstance(summary, str), f"Summary should be a string, got {type(summary)}"
+        # Since the store now falls back to raw_text, it might contain actual content
+        assert "transformer" in summary.lower() or summary == "" or "pending" in summary.lower(), f"Unexpected summary content: '{summary}'"
         
         # Sanity check for similarity (cosine distance; 0 is identical, >0.3 is usually relevant)
         # Note: Depending on backend, lower score might mean closer or distance.

@@ -39,12 +39,24 @@ class MemoryStore:
         self._conn = sqlite3.connect(mnemo.config.DB_PATH, check_same_thread=False)
         
         try:
+            if hasattr(self._conn, "enable_load_extension"):
+                self._conn.enable_load_extension(True)
+            
             import sqlite_vec
             sqlite_vec.load(self._conn)
+            
+            if hasattr(self._conn, "enable_load_extension"):
+                self._conn.enable_load_extension(False)
+                
             self._has_vec = True
+            log.info("sqlite-vec loaded successfully")
         except ImportError:
+            if hasattr(self._conn, "enable_load_extension"):
+                self._conn.enable_load_extension(False)
             log.warning("sqlite_vec not found. Falling back to numpy for vector search.")
         except Exception as e:
+            if hasattr(self._conn, "enable_load_extension"):
+                self._conn.enable_load_extension(False)
             log.warning(f"Failed to load sqlite_vec: {e}. Falling back to numpy for vector search.")
 
         self._conn.executescript(SCHEMA_SQL)
