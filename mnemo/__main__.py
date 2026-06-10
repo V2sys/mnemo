@@ -117,26 +117,29 @@ def main():
             "type_filter": None
         }
         print(f"\nProcessing query: '{query_text}'...")
+        # Tell UI we are loading
+        app.after(0, app.show_loading)
+        
         try:
             response = query_engine.handle(request)
             print("\n--- Response ---")
             print(f"Intent classified as: {response['response_type'].upper()}")
             
             if response["response_type"] == "action":
-                print(f"Action Output: {response['text']}")
-                action_payload = response["action"]
+                print(f"Action Detected: {response.get('action')}")
+                action_payload = response.get("action")
                 if action_payload:
-                    success = action_router.execute(action_payload)
-                    print(f"Execution {'succeeded' if success else 'failed'}.")
+                    action_router.execute(action_payload)
+                app.after(0, app.hide_window)
             else:
-                print(f"Confidence: {response['confidence'].upper()}")
-                print(f"\nAnswer:\n{response['text']}")
-                print("\nSources retrieved:")
-                for i, src in enumerate(response['sources']):
-                    print(f"  [{i+1}] {src['type'].upper()} ({src.get('source', 'Unknown')}): {src['summary'][:100]}...")
+                print(f"Confidence: {response.get('confidence', 'none').upper()}")
+                print(f"\nAnswer:\n{response.get('text', '')}")
+                app.after(0, lambda: app.render_response(response))
+                
             print("----------------\n")
         except Exception as e:
             print(f"Query failed: {e}")
+            app.after(0, app.hide_window)
 
     # Initialize UI on the main thread
     app = MnemoOverlay(on_submit=handle_query)

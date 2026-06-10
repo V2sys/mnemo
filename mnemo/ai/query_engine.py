@@ -134,6 +134,12 @@ class QueryEngine:
 
     def _classify_intent(self, query: str) -> str:
         """Returns 'ANSWER' or 'ACTION'."""
+        # Fast-path heuristic: instantly bypass the first LLM call if the user is clearly commanding the system.
+        # This cuts action latency directly in half!
+        action_keywords = ("open ", "launch ", "run ", "start ", "lock ", "sleep")
+        if query.lower().startswith(action_keywords):
+            return "ACTION"
+            
         prompt = INTENT_PROMPT.format(query=query)
         # Submit to the thread pool to prevent blocking/OOM
         future = inference_pool.submit(self.phi3.generate, prompt=prompt, max_tokens=10, temperature=0.1)
