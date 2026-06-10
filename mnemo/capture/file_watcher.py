@@ -78,7 +78,8 @@ class FileWatcher(FileSystemEventHandler):
                     skipped += 1
                     continue
                 try:
-                    self._process(path)
+                    # Skip summarization on bulk index to avoid clogging the LLM queue
+                    self._process(path, skip_summary=True)
                     total += 1
                 except Exception as e:
                     log.warning("Bulk index error for %s: %s", path.name, e)
@@ -103,7 +104,7 @@ class FileWatcher(FileSystemEventHandler):
     def on_created(self, event) -> None:
         self.on_modified(event)
 
-    def _process(self, path: Path) -> None:
+    def _process(self, path: Path, skip_summary: bool = False) -> None:
         """Extract text and pass to the pipeline."""
         text = extract_text(path)
         if not text or not text.strip():
@@ -122,7 +123,7 @@ class FileWatcher(FileSystemEventHandler):
         embedding = self._embedder.encode(content_with_metadata)
         
         summary = None
-        if self._summarizer is not None and len(text) > FILE_SUMMARY_CHAR_THRESHOLD:
+        if not skip_summary and self._summarizer is not None and len(text) > FILE_SUMMARY_CHAR_THRESHOLD:
             try:
                 from mnemo.ai.phi3 import inference_pool
                 future = inference_pool.submit(self._summarizer.summarize, content_with_metadata)

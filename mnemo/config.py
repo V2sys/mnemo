@@ -33,8 +33,6 @@ WATCH_DIRS: tuple[Path, ...] = (
     Path.home() / "Documents",
     Path.home() / "OneDrive" / "Documents",
     Path.home() / "Downloads",
-    Path.home() / "Desktop",
-    Path.home() / "OneDrive" / "Desktop",
 )
 
 # Activity mode default — "focus" (hotkey only) or "memory" (passive)

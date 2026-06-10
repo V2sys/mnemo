@@ -84,14 +84,17 @@ def main():
 
     file_watcher = FileWatcher(config.WATCH_DIRS, store, embedder, summarizer)
     
-    log.info("Running first-run bulk index...")
-    try:
-        file_watcher.bulk_index_directory()
-    except Exception as e:
-        log.warning("Bulk index failed: %s — continuing anyway", e)
-    log.info("Bulk index done. Starting file watcher...")
-        
-    file_watcher.start_background()
+    def _run_bulk_index():
+        log.info("Running first-run bulk index in background...")
+        try:
+            file_watcher.bulk_index_directory()
+        except Exception as e:
+            log.warning("Bulk index failed: %s — continuing anyway", e)
+        log.info("Bulk index done. Starting live file watcher...")
+        file_watcher.start_background()
+
+    # Run the massive indexing job in a separate thread so it doesn't freeze the startup
+    threading.Thread(target=_run_bulk_index, daemon=True).start()
 
     activity_monitor = ActivityMonitor(store=store)
     activity_monitor.set_enabled(config.DEFAULT_MODE == "memory")

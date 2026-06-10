@@ -41,17 +41,27 @@ class MnemoOverlay(ctk.CTk):
         self.geometry(f"{self.width}x{self.height}+{x}+{y}")
 
         # --- UI Elements ---
-        # Deeper black for the true "floating" feel
+        # CustomTkinter base window does not accept "transparent"
         bg_color = "#121212"
+        frame_color = "#121212"
         self.configure(fg_color=bg_color)
+        
+        # Apply Windows 11 Mica Glassmorphism
+        try:
+            import pywinstyles
+            pywinstyles.apply_style(self, "mica")
+            # Tweak the titlebar to blend perfectly
+            pywinstyles.change_header_color(self, color="#121212")
+        except ImportError:
+            pass
         
         # Main container frame
         self.frame = ctk.CTkFrame(
             self, 
-            corner_radius=0, 
-            fg_color=bg_color, 
-            border_width=2, 
-            border_color="#333333" # Soft grey border
+            corner_radius=12, 
+            fg_color=frame_color, 
+            border_width=1, 
+            border_color="#303030" # Softer grey border for premium look
         )
         self.frame.pack(fill="both", expand=True, padx=0, pady=0)
         
@@ -72,8 +82,8 @@ class MnemoOverlay(ctk.CTk):
         self.search_input = ctk.CTkEntry(
             self.search_row, 
             placeholder_text="What would you like to recall?",
-            placeholder_text_color="#666666",
-            font=("Segoe UI", 24),
+            placeholder_text_color="#888888",
+            font=("Segoe UI Variable Display", 24, "bold"),
             fg_color="transparent",
             border_width=0,
             text_color="#ffffff"
@@ -97,9 +107,8 @@ class MnemoOverlay(ctk.CTk):
         self.frame.configure(border_color="#00a8ff") 
 
     def on_focus_out(self, event):
-        """Restore normal border and hide when clicking away."""
+        """Restore normal border when clicking away."""
         self.frame.configure(border_color="#333333")
-        self.hide_window()
 
     def submit_query(self, event=None):
         # If we have a pending action, hitting Enter confirms it
