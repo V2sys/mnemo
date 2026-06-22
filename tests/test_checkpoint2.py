@@ -3,6 +3,10 @@ tests/test_checkpoint2.py
 Vinayak's Week 2 Checkpoint Test.
 """
 
+# Force onnxruntime to initialize before winrt to avoid
+# Windows DLL conflict
+import onnxruntime as _ort_init  # noqa: F401
+
 import io
 import logging
 import os

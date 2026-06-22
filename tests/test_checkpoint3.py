@@ -22,6 +22,17 @@ from mnemo.schema import ACTIVITY_POLL_INTERVAL_SEC
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger(__name__)
 
+def safe_rmtree(path, retries=5, delay=0.5):
+    for attempt in range(retries):
+        try:
+            shutil.rmtree(path)
+            return
+        except PermissionError:
+            if attempt < retries - 1:
+                time.sleep(delay)
+            else:
+                print(f"Warning: could not clean up {path} - skipping")
+
 def run_tests():
     tmp = Path(tempfile.mkdtemp())
     original_db_path = config.DB_PATH
@@ -143,7 +154,7 @@ def run_tests():
 
     finally:
         config.DB_PATH = original_db_path
-        shutil.rmtree(tmp)
+        safe_rmtree(tmp)
 
     # ──────────────────────────────────────────────────────────────
     # SUMMARY
