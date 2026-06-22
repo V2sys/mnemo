@@ -36,13 +36,20 @@ class Phi3Engine:
         log.info(f"Loading Phi-3 Mini from {PHI3_MODEL_PATH}")
         
         try:
+            import os
+            import sys
+            if sys.platform == "win32":
+                ollama_cuda = r"C:\Users\vinay\AppData\Local\Programs\Ollama\lib\ollama\cuda_v12"
+                if os.path.exists(ollama_cuda):
+                    os.add_dll_directory(ollama_cuda)
+                    os.environ["PATH"] = ollama_cuda + os.path.pathsep + os.environ["PATH"]
             from llama_cpp import Llama
             self._llm = Llama(
                 model_path=str(PHI3_MODEL_PATH),
                 n_ctx=4096,
                 n_threads=4,
                 n_gpu_layers=-1,   # offload all to GPU if Vulkan/DirectML
-                verbose=False,
+                verbose=True,
             )
             log.info("Phi-3 Mini loaded successfully.")
         except ImportError as e:
